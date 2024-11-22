@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Playing video</title>
+    <style>
+    </style>
+</head>
+
+<body>
+
+    <div style="width: 100%; text-align: center;">
+        <video style="display: block; margin: 0 auto;" controls preload="metadata">
+            <source id="videoPlayer" type="video/mp4">
+        </video>
+    </div>
+
+    <script>
+        const videoPlayer = document.getElementById('videoPlayer');
+
+        // load video
+        const baseUrl = `${window.location.protocol}//${window.location.host}/`;
+        const url = new URL(window.location.href);
+        const videoPath = url.searchParams.get('video');
+        videoPlayer.src = baseUrl + '?download=' + videoPath;
+        console.log('Video: ' + videoPlayer.src);
+    </script>
+
+</body>
+</html>
