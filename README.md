@@ -1,5 +1,7 @@
 # VLC-Video-Share
 Simple HTTP server designed around sharing Video or Audio to VLC compatible devices
+* Simply copy URLs and paste them into VLC streams and it just works.
+* Or download files to other devices.
 
 ## Firewall (Allow port on different OSes)
 * Windows:
