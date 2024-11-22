@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Family Video Share</title>
+    <title>VLC Video Share</title>
     <style>
         #itemList {
             list-style-type: none;
@@ -89,6 +89,9 @@
                 linkText.readOnly = true;
                 linkText.type = 'text';
                 linkText.style = 'width: 200px; margin: 8px';
+                linkText.onfocus = () => {
+                    linkText.select();
+                };
 
                 const downloadButton = document.createElement('a');
                 downloadButton.textContent = 'Download';
