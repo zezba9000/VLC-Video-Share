@@ -55,7 +55,9 @@
         {
             const exts = filename.split('.');
             const ext = exts[exts.length - 1];
-            if (exts.length >= 2 && (ext === 'mkv' || ext === 'iso'))// is video
+            if (exts.length >= 2 &&
+                (ext === 'mkv' || ext === 'iso' || ext === 'mp4' || ext === 'avi' || ext === 'mov' || ext === 'wmv' || ext === 'flv' || ext === 'webm' || ext === 'mpeg' || ext === 'mpg' || ext === '3pg' || ext === 'ogv'// video
+                || ext === 'mp3' || ext === 'ogg' || ext === 'wav' || ext === 'aac' || ext === 'flac' || ext === 'wma' || ext === 'aiff' || ext === 'alac' || ext === 'amr' || ext === 'opus'))// audio
             {
                 const listItem = document.createElement('li');
                 if (filename.includes('\\')) listItem.textContent = filename.split('\\').pop();
