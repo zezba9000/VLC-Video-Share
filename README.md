@@ -2,11 +2,15 @@
 Simple HTTP server designed around sharing Video or Audio to VLC compatible devices
 
 ## Firewall (Allow port on different OSes)
-* Windows: ```netsh http add urlacl url=http://+:8085/ user=Everyone```
-    * Windows list: ```netsh http show urlacl```
-    * Windows remove: ```netsh http delete urlacl url=http://+:8080/```
-* macOS: ```(Nothing needed for port 8085)```
-* Linux: ```sudo ufw allow 8085```
+* Windows:
+    * Add access rule: ```netsh http add urlacl url=http://+:8085/ user=Everyone```
+    * List access rule: ```netsh http show urlacl```
+    * Remove access rule: ```netsh http delete urlacl url=http://+:8080/```
+    * Add firewall rule: ```netsh advfirewall firewall add rule name="Allow Port 8085" dir=in action=allow protocol=TCP localport=8085```
+    * Show firewall rule: ```netsh advfirewall firewall show rule name="Allow Port 8085"```
+    * Remove firewall rule: ```netsh advfirewall firewall delete rule name="Allow Port 8085"```
+* macOS: ```(Nothing needed for port 8085 [needs testings])```
+* Linux: ```sudo ufw allow 8085 [needs testings]```
 
 ## Building (NOTE: you can swap '*-x64' with '*-arm64' or '*-arm')
 * Windows (needs .NET installed): ```dotnet publish -r win-x64 -c Release```
