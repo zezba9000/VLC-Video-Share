@@ -90,7 +90,7 @@ namespace VLCVideoShare
         private static async void HttpThread(object obj)
         {
             // find specific endpoint
-			#if !DEBUG
+			#if DEBUG
 			string address = "localhost";
 			#else
 			string address;
