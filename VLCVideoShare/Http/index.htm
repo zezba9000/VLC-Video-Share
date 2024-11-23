@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>VLC Video Share</title>
+    <title>Family Video Share</title>
     <style>
         #itemList {
             list-style-type: none;
@@ -64,6 +64,7 @@
                 else if (filename.includes('/')) listItem.textContent = filename.split('/').pop();
                 else listItem.textContent = filename;
 
+                filename = encodeURIComponent(filename);
                 const url = window.location.href + '?download=' + filename;
 
                 // most browsers have codex issues with video/audio data (use VLC instead)
@@ -90,8 +91,10 @@
                 linkText.type = 'text';
                 linkText.style = 'width: 200px; margin: 8px';
                 linkText.onfocus = () => {
-                    linkText.select();
-                };
+                    setTimeout(() => {
+                        linkText.select();
+                    }, 500);
+                }
 
                 const downloadButton = document.createElement('a');
                 downloadButton.textContent = 'Download';
@@ -116,7 +119,7 @@
                 if (filename.includes('\\')) name = filename.split('\\').pop();
                 else if (filename.includes('/')) name = filename.split('/').pop();
                 else name = filename;
-                console.log(name);
+                
                 if (!name) folderButton.textContent = 'Folder: ' + filename;
                 else folderButton.textContent = 'Folder: ' + name;
                 folderButton.addEventListener('click', function () {
@@ -138,7 +141,7 @@
 
             try
             {
-                const response = await fetch(window.location.href + "?files=" + folderPath);
+                const response = await fetch(window.location.href + "?files=" + encodeURIComponent(folderPath));
                 if (!response.ok)
                 {
                     throw new Error(`Failed to fetch file: ${response.status}`);
@@ -170,7 +173,7 @@
                             backButton.addEventListener('click', function () {
                                 var folder;
                                 if (folderPath.includes('\\')) folder = folderPath.split('\\').pop();
-                                else if (filename.includes('/')) folder = folderPath.split('/').pop();
+                                else if (folderPath.includes('/')) folder = folderPath.split('/').pop();
                                 else folder = folderPath;
                                 folderPath = folderPath.substring(0, folderPath.length - (folder.length + 1));
                                 loadFiles();
