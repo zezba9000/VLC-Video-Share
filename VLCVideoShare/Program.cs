@@ -251,7 +251,7 @@ namespace VLCVideoShare
 						if (requestQuePath == "$root$")
 						{
 							folders = new string[sharePaths.Count + 1];
-							folders[0] = "";// root is blank here
+							folders[0] = string.Empty;// root is blank here
 							for (int i = 0; i != sharePaths.Count; ++i) folders[i + 1] = sharePaths[i];
 						}
 						else
@@ -271,10 +271,17 @@ namespace VLCVideoShare
 							// write folder list to memory
 							foreach (string folder in folders)
 							{
-								var info = new DirectoryInfo(folder);
-								if ((info.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden) continue;
-								Console.WriteLine($"File found: '{folder}'");
-								writer.Write($"{folder}\n");
+								if (folder == string.Empty)
+								{
+									writer.Write("\n");// write blank root
+								}
+								else
+								{
+									var info = new DirectoryInfo(folder);
+									if ((info.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden) continue;
+									Console.WriteLine($"File found: '{folder}'");
+									writer.Write($"{folder}\n");
+								}
 							}
 
 							// write file list to memory
