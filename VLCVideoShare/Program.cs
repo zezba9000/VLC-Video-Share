@@ -324,7 +324,7 @@ namespace VLCVideoShare
 								response.AddHeader("Content-Disposition", "attachment; filename=" + Path.GetFileName(requestQuePath));
 
 								// Copy the file stream to the response output stream
-								var buffer = new byte[1024 * 1024 * 8];// 8mb buffer is ideal for USB3 or faster devices
+								var buffer = new byte[1024 * 1024 * 128];// 128mb
 								fileStream.Seek(start, SeekOrigin.Begin);
 								long read = start, endRead = end + 1;
 								do
