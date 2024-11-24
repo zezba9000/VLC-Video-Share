@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Runtime;
 using System.Text;
 using System.Threading;
 
@@ -246,33 +247,58 @@ namespace VLCVideoShare
 						}
 
 						// grab files
-						string[] files;
+						string[] folders, files = null;
 						if (requestQuePath == "$root$")
 						{
-							files = new string[sharePaths.Count + 1];
-							files[0] = "";// root is blank here
-							for (int i = 0; i != sharePaths.Count; ++i) files[i + 1] = sharePaths[i];
+							folders = new string[sharePaths.Count + 1];
+							folders[0] = "";// root is blank here
+							for (int i = 0; i != sharePaths.Count; ++i) folders[i + 1] = sharePaths[i];
 						}
 						else
 						{
 							var folderValues = Directory.GetDirectories(requestQuePath);
-							var fileValues = Directory.GetFiles(requestQuePath);
-							files = new string[folderValues.Length + fileValues.Length + 1];
-							files[0] = requestQuePath;// folder file path
-							for (int i = 0; i != folderValues.Length; ++i) files[i + 1] = folderValues[i];
-							for (int i = 0; i != fileValues.Length; ++i) files[i + folderValues.Length + 1] = fileValues[i];
+							folders = new string[folderValues.Length + 1];
+							folders[0] = requestQuePath;// folder file path
+							for (int i = 0; i != folderValues.Length; ++i) folders[i + 1] = folderValues[i];
+
+							files = Directory.GetFiles(requestQuePath);
 						}
 
 						// send files
 						using (var stream = new MemoryStream())
 						using (var writer = new StreamWriter(stream, Encoding.UTF8))
 						{
-							// write file list to memory
-							foreach (string file in files)
+							// write folder list to memory
+							foreach (string folder in folders)
 							{
-								Console.WriteLine($"File found: '{file}'");
-								writer.Write(file + "\n");
+								var info = new DirectoryInfo(folder);
+								if ((info.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden) continue;
+								Console.WriteLine($"File found: '{folder}'");
+								writer.Write($"{folder}\n");
 							}
+
+							// write file list to memory
+							if (files != null)
+							{
+								foreach (string file in files)
+								{
+									var info = new FileInfo(file);
+									if ((info.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden) continue;
+									long size = info.Length;
+
+									double kb = Math.Round(size / 1024.0, 2);
+									double mb = Math.Round(size / 1024.0 / 1024.0, 2);
+									double gb = Math.Round(size / 1024.0 / 1024.0 / 1024.0, 2);
+									string sizeInfo;
+									if (kb < 1024) sizeInfo = $"{kb} KB";
+									else if (mb < 1024) sizeInfo = $"{mb} MB";
+									else sizeInfo = $"{gb} GB";
+
+									Console.WriteLine($"File found: '{file}' Size:{sizeInfo}");
+									writer.Write($"{file}^{sizeInfo}\n");
+								}
+							}
+
 							writer.Flush();
 							stream.Flush();
 							stream.Position = 0;

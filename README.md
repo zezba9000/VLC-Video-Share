@@ -2,6 +2,11 @@
 Simple HTTP server designed around sharing Video or Audio to VLC compatible devices
 * Simply copy URLs and paste them into VLC streams and it just works.
 * Or download files to other devices.
+* To host simpling pass in paths you want to share: ```VLCVideoShare <path-to-folder> <path-to-folder> etc...```
+
+## Other options
+* Open NAT/UPnP on router for quick share: ```--OpenNAT``` (NOTE: manual port forwarding can be faster on routers)
+* Use a custom port: ```--Port=1234``` (default is 8085)
 
 ## Firewall (Allow port on different OSes)
 * Windows:

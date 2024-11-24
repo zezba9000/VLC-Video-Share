@@ -71,10 +71,16 @@
                 const ext = exts[exts.length - 1];
                 if (exts.length >= 2)// is file
                 {
+                    const parts = filename.split('^');
+                    filename = parts[0];
+                    const fileSize = parts[1];
+
                     const listItem = document.createElement('li');
-                    if (filename.includes('\\')) listItem.textContent = filename.split('\\').pop();
-                    else if (filename.includes('/')) listItem.textContent = filename.split('/').pop();
-                    else listItem.textContent = filename;
+                    var filenameOnly;
+                    if (filename.includes('\\')) filenameOnly = filename.split('\\').pop();
+                    else if (filename.includes('/')) filenameOnly = filename.split('/').pop();
+                    else filenameOnly = filename;
+                    listItem.textContent = filenameOnly + ' (' + fileSize + ')';
 
                     filename = encodeURIComponent(filename);
                     const url = baseUrl + '?download=' + filename;
