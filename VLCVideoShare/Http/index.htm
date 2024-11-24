@@ -19,6 +19,10 @@
             align-items: center;
         }
 
+        #itemList .filename:nth-child(2n+1) {
+            background-color: #e0e0e0;
+        }
+
         #itemList button {
             background-color: #007bff;
             color: white;
@@ -76,11 +80,12 @@
                     const fileSize = parts[1];
 
                     const listItem = document.createElement('li');
+                    listItem.className = 'filename';
                     var filenameOnly;
                     if (filename.includes('\\')) filenameOnly = filename.split('\\').pop();
                     else if (filename.includes('/')) filenameOnly = filename.split('/').pop();
                     else filenameOnly = filename;
-                    listItem.textContent = filenameOnly + ' (' + fileSize + ')';
+                    listItem.textContent = `${filenameOnly} - ${fileSize}`;
 
                     filename = encodeURIComponent(filename);
                     const url = baseUrl + '?download=' + filename;
