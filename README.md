@@ -11,8 +11,8 @@ Simple HTTP server designed around sharing Video or Audio to VLC compatible devi
     * Add firewall rule: ```netsh advfirewall firewall add rule name="Allow Port 8085" dir=in action=allow protocol=TCP localport=8085```
     * Show firewall rule: ```netsh advfirewall firewall show rule name="Allow Port 8085"```
     * Remove firewall rule: ```netsh advfirewall firewall delete rule name="Allow Port 8085"```
-* macOS: ```(Nothing needed for port 8085 [TODO: needs testing])```
-* Linux: ```sudo ufw allow 8085 [TODO: needs testing]```
+* macOS: ```(Nothing needed for port 8085)```
+* Linux: ```(Nothing needed for port 8085)``` or ```sudo ufw allow 8085```
 
 ## Building (NOTE: you can swap '*-x64' with '*-arm64' or '*-arm')
 * Windows (needs .NET installed): ```dotnet publish -r win-x64 -c Release```

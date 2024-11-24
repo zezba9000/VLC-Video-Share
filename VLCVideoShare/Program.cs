@@ -9,16 +9,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-// ============================
-// Allow port on different OSes
-// ============================
-// Windows: netsh http add urlacl url=http://+:8085/ user=Everyone
-//	-	Windows list: netsh http show urlacl
-//	-	Windows remove: netsh http delete urlacl url=http://+:8080/
-
-// macOS: (Nothing needed for port 8085)
-// Linux: sudo ufw allow 8085
-
 namespace VLCVideoShare
 {
 	enum RequestType
@@ -36,8 +26,10 @@ namespace VLCVideoShare
 
 		private static HttpListener httpListener;
 		private static List<string> sharePaths;
+		private static int port = 8085;
 
 		private static OpenedNATDevice natDevice;
+		private static bool openNAT;
 
         static void Main(string[] args)
         {
@@ -52,10 +44,35 @@ namespace VLCVideoShare
 			{
 				foreach (var arg in args)
 				{
-					sharePaths.Add(arg);
+					if (arg == "--OpenNAT")
+					{
+						openNAT = true;
+					}
+					else if (arg == "--Port=")
+					{
+						var values = arg.Split('=');
+						if (values.Length != 2)
+						{
+							Console.WriteLine("Invalid port override");
+							continue;
+						}
+
+						if (int.TryParse(values[1], out int portOverride)) port = portOverride;
+						else Console.WriteLine("Invalid port");
+					}
+					else
+					{
+						sharePaths.Add(arg);
+					}
 				}
 			}
 			#endif
+
+			if (sharePaths.Count == 0)
+			{
+				Console.WriteLine("No share paths");
+				return;
+			}
 
 			// start http thread
 			Console.WriteLine("Type 'q' to exit");
@@ -83,8 +100,11 @@ namespace VLCVideoShare
 				catch { }
 			}
 
-			//NATUtils.ClosePort(natDevice);
-			//Console.WriteLine("NAT closed");
+			if (natDevice != null)
+			{
+				NATUtils.ClosePort(natDevice);
+				Console.WriteLine("NAT closed");
+			}
         }
 
         private static async void HttpThread(object obj)
@@ -93,9 +113,7 @@ namespace VLCVideoShare
 			#if DEBUG
 			string address = "localhost";
 			#else
-			string address;
-			if (Environment.OSVersion.Platform == PlatformID.Win32NT) address = "+";
-			else address = "0.0.0.0";
+			string address = "+";
 			/*foreach (var i in NetworkInterface.GetAllNetworkInterfaces())
 			{
 				if (i.OperationalStatus == OperationalStatus.Up && !i.IsReceiveOnly)
@@ -116,10 +134,13 @@ namespace VLCVideoShare
 			#endif
 
 			// open NAT for port
-			//natDevice = NATUtils.OpenPort(true, true, 8085, 60 * 60 * 8, "VideoShare");
+			if (openNAT)
+			{
+				natDevice = NATUtils.OpenPort(true, true, port, 60 * 60 * 8, "VLCVideoShare");
+			}
 
 			// format URL
-			address = $"http://{address}:8085/";
+			address = $"http://{address}:{port}/";
 
 			// create and start the HTTP listener
 			Console.WriteLine("Listening on " + address);
