@@ -383,7 +383,6 @@ namespace VLCVideoShare
 				finally
 				{
 					// always close the output stream
-					response.OutputStream.Close();
 					response.Close();
 				}
 			}
