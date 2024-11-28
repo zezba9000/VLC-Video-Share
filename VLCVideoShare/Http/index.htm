@@ -53,6 +53,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const files = urlParams.get('path');
             var user = urlParams.get('user');
+            if (!user) user = '';
             if (files) {
                 folderPath = decodeURIComponent(files);
             }
@@ -225,7 +226,7 @@
                             if (line !== '') {
                                 container = document.createElement('div');
                                 container.style = 'display: flex;';
-                                container.textContent = 'Last Opened:\u00A0';
+                                container.textContent = 'Last Content:\u00A0';
 
                                 const lastOpened = document.createElement('input');
                                 lastOpened.readOnly = true;
