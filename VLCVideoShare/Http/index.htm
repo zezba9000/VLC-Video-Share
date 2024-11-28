@@ -52,11 +52,12 @@
             var folderPath = '$root$';
             const urlParams = new URLSearchParams(window.location.search);
             const files = urlParams.get('path');
+            var user = urlParams.get('user');
             if (files) {
                 folderPath = decodeURIComponent(files);
             }
             else {
-                window.location.href = '/?path=$root$';
+                window.location.href = '/?user=' + user + '&path=$root$';
                 return;
             }
 
@@ -88,7 +89,7 @@
                     listItem.textContent = `${filenameOnly} - ${fileSize}`;
 
                     filename = encodeURIComponent(filename);
-                    const url = baseUrl + '?download=' + filename;
+                    const url = baseUrl + '?user=' + user + '&download=' + filename;
 
                     // most browsers have codex issues with video/audio data (use VLC instead)
                     /*const playButton = document.createElement('button');
@@ -146,7 +147,7 @@
                     else folderButton.textContent = 'Folder: ' + name;
                     folderButton.addEventListener('click', function () {
                         folderPath = filename;
-                        window.location.href = '/?path=' + encodeURIComponent(folderPath);
+                        window.location.href = '/?user=' + user + '&path=' + encodeURIComponent(folderPath);
                     });
 
                     const container = document.createElement('div');
@@ -159,7 +160,7 @@
 
             async function loadFiles() {
                 try {
-                    const response = await fetch(baseUrl + '?files=' + encodeURIComponent(folderPath));
+                    const response = await fetch(baseUrl + '?user=' + user + '&files=' + encodeURIComponent(folderPath));
                     if (!response.ok) {
                         throw new Error(`Failed to fetch file: ${response.status}`);
                     }
@@ -168,11 +169,10 @@
                     const lines = text.split('\n'); // Split by line breaks
 
                     // Populate the list with items
-                    var firstItem = true;
+                    var itemCount = 0;
                     lines.forEach(line => {
-
-                        if (firstItem === true) {
-                            firstItem = false;
+                        console.log(line);
+                        if (itemCount === 0) {// path we're in
                             if (line === '') {
                                 const pathItem = document.createElement('div');
                                 pathItem.textContent = 'Home';
@@ -190,7 +190,7 @@
                                     else if (folderPath.includes('/')) folder = folderPath.split('/').pop();
                                     else folder = folderPath;
                                     folderPath = folderPath.substring(0, folderPath.length - (folder.length + 1));
-                                    window.location.href = '/?path=' + encodeURIComponent(folderPath);
+                                    window.location.href = '/?user=' + user + '&path=' + encodeURIComponent(folderPath);
                                 });
 
                                 const pathItem = document.createElement('div');
@@ -202,12 +202,54 @@
                             }
                             itemList.appendChild(document.createElement('br'));
                         }
+                        else if (itemCount === 1) {// last file downloaded
+                            var container = document.createElement('div');
+                            container.style = 'display: flex;';
+                            container.textContent = 'User:\u00A0';
+
+                            const userInput = document.createElement('input');
+                            userInput.type = 'text';
+                            userInput.value = user;
+
+                            const refreshButton = document.createElement('button');
+                            refreshButton.textContent = 'Refresh';
+                            refreshButton.addEventListener('click', function () {
+                                user = userInput.value;
+                                window.location.href = '/?user=' + user + '&path=' + encodeURIComponent(folderPath);
+                            });
+
+                            container.appendChild(userInput);
+                            container.appendChild(refreshButton);
+                            itemList.appendChild(container);
+                            itemList.appendChild(document.createElement('br'));
+                            if (line !== '') {
+                                container = document.createElement('div');
+                                container.style = 'display: flex;';
+                                container.textContent = 'Last Opened:\u00A0';
+
+                                const lastOpened = document.createElement('input');
+                                lastOpened.readOnly = true;
+                                lastOpened.type = 'text';
+                                lastOpened.value = line;
+                                lastOpened.onfocus = () => {
+                                    setTimeout(() => {
+                                        lastOpened.select();
+                                    }, 250);
+                                }
+
+                                container.appendChild(lastOpened);
+                                itemList.appendChild(container);
+                                itemList.appendChild(document.createElement('br'));
+                            }
+                        }
                         else {
                             const lineTrimmed = line.trim();
                             if (lineTrimmed) {
                                 addListItem(lineTrimmed);
                             }
                         }
+
+                        itemCount += 1;
                     });
                 }
                 catch (error) {

@@ -32,6 +32,8 @@ namespace VLCVideoShare
 		private static OpenedNATDevice natDevice;
 		private static bool openNAT;
 
+		private static Dictionary<string, string> lastUserFiles;
+
         static void Main(string[] args)
         {
 			// get paths
@@ -75,6 +77,32 @@ namespace VLCVideoShare
 				return;
 			}
 
+			// load user files
+			lastUserFiles = new Dictionary<string, string>();
+			string userSettingsPath = Path.Combine(Environment.CurrentDirectory, "UserSettings.txt");
+			if (File.Exists(userSettingsPath))
+			{
+				try
+				{
+					using (var stream = File.OpenRead(userSettingsPath))
+					using (var reader = new StreamReader(stream))
+					{
+						while (stream.Position < stream.Length)
+						{
+							string line = reader.ReadLine();
+							if (string.IsNullOrEmpty(line)) continue;
+
+							var values = line.Split('^');
+							lastUserFiles.Add(values[0], values[1]);
+						}
+					}
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine(e);
+				}
+			}
+
 			// start http thread
 			Console.WriteLine("Type 'q' to exit");
 			httpThreadAlive = true;
@@ -105,6 +133,16 @@ namespace VLCVideoShare
 			{
 				NATUtils.ClosePort(natDevice);
 				Console.WriteLine("NAT closed");
+			}
+
+			// save user files
+			using (var stream = File.OpenWrite(userSettingsPath))
+			using (var writer = new StreamWriter(stream))
+			{
+				foreach (var user in lastUserFiles)
+				{
+					writer.WriteLine($"{user.Key}^{user.Value}");
+				}
 			}
         }
 
@@ -176,6 +214,7 @@ namespace VLCVideoShare
 				response.StatusCode = (int)HttpStatusCode.OK;// default ok
 
 				// check query string
+				string user = string.Empty;
 				var requestType = RequestType.Normal;
 				string requestQuePath = null;
 				foreach (var queryKey in request.QueryString.AllKeys)
@@ -185,13 +224,15 @@ namespace VLCVideoShare
 					{
 						requestType = RequestType.RequestFiles;
 						requestQuePath = queryValue;
-						break;
 					}
 					else if (queryKey == "download")
 					{
 						requestType = RequestType.DownloadFile;
 						requestQuePath = queryValue;
-						break;
+					}
+					else if (queryKey == "user")
+					{
+						user = queryValue;
 					}
 				}
 
@@ -248,18 +289,22 @@ namespace VLCVideoShare
 
 						// grab files
 						string[] folders, files = null;
+						const int metaDataCount = 2;
+						string lastFile = lastUserFiles.ContainsKey(user) ? lastUserFiles[user] : string.Empty;
 						if (requestQuePath == "$root$")
 						{
-							folders = new string[sharePaths.Count + 1];
+							folders = new string[sharePaths.Count + metaDataCount];
 							folders[0] = string.Empty;// root is blank here
-							for (int i = 0; i != sharePaths.Count; ++i) folders[i + 1] = sharePaths[i];
+							folders[1] = lastFile;// metadata: last downloaded file
+							for (int i = 0; i != sharePaths.Count; ++i) folders[i + metaDataCount] = sharePaths[i];
 						}
 						else
 						{
 							var folderValues = Directory.GetDirectories(requestQuePath);
-							folders = new string[folderValues.Length + 1];
-							folders[0] = requestQuePath;// folder file path
-							for (int i = 0; i != folderValues.Length; ++i) folders[i + 1] = folderValues[i];
+							folders = new string[folderValues.Length + metaDataCount];
+							folders[0] = requestQuePath;// metadata: folder file path
+							folders[1] = lastFile;// metadata: last downloaded file
+							for (int i = 0; i != folderValues.Length; ++i) folders[i + metaDataCount] = folderValues[i];
 
 							files = Directory.GetFiles(requestQuePath);
 						}
@@ -269,19 +314,24 @@ namespace VLCVideoShare
 						using (var writer = new StreamWriter(stream, Encoding.UTF8))
 						{
 							// write folder list to memory
+							int count = 0;
 							foreach (string folder in folders)
 							{
-								if (folder == string.Empty)
+								if (string.IsNullOrEmpty(folder))
 								{
-									writer.Write("\n");// write blank root
+									writer.Write('\n');// write blank root
+								}
+								else if (count < 2)
+								{
+									writer.Write($"{folder}\n");
 								}
 								else
 								{
 									var info = new DirectoryInfo(folder);
 									if ((info.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden) continue;
-									Console.WriteLine($"File found: '{folder}'");
 									writer.Write($"{folder}\n");
 								}
+								count++;
 							}
 
 							// write file list to memory
@@ -301,7 +351,6 @@ namespace VLCVideoShare
 									else if (mb < 1024) sizeInfo = $"{mb} MB";
 									else sizeInfo = $"{gb} GB";
 
-									Console.WriteLine($"File found: '{file}' Size:{sizeInfo}");
 									writer.Write($"{file}^{sizeInfo}\n");
 								}
 							}
@@ -339,6 +388,12 @@ namespace VLCVideoShare
 							response.StatusCode = (int)HttpStatusCode.BadRequest;
 							Console.WriteLine("Non-valid share file requested");
 							return;
+						}
+
+						// store last user file
+						if (!string.IsNullOrEmpty(user))
+						{
+							lastUserFiles[user] = request.Url.OriginalString;
 						}
 
 						// serve file to client
