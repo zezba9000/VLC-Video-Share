@@ -440,7 +440,7 @@ namespace VLCVideoShare
 								response.AddHeader("Content-Disposition", $"attachment; filename=\"{filename}\"");
 
 								// Copy the file stream to the response output stream
-								const int bufferSize = 1024 * 1024 * 512;// 512mb
+								const int bufferSize = 1024 * 1024 * 128;// 128mb
 								fileStream.Seek(start, SeekOrigin.Begin);
 								long read = start, endRead = end + 1;
 
