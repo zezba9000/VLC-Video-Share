@@ -1,7 +1,9 @@
 ﻿#define ALLOW_DEBUG_PATH
+#define USE_STREAM_THREADS
 
 using Reign;
 using System;
+using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -433,9 +435,104 @@ namespace VLCVideoShare
 								response.AddHeader("Content-Disposition", $"attachment; filename=\"{Path.GetFileName(requestQuePath)}\"");
 
 								// Copy the file stream to the response output stream
-								var buffer = new byte[1024 * 1024 * 128];// 128mb
+								const int bufferSize = 1024 * 1024 * 128;// 128mb
 								fileStream.Seek(start, SeekOrigin.Begin);
 								long read = start, endRead = end + 1;
+
+								#if USE_STREAM_THREADS
+								var lockObj = new object();
+
+								int bufferSwap = 0;
+								var bufferSizes = new int[2];
+								var buffers = new byte[2][];
+								buffers[0] = new byte[bufferSize];
+								buffers[1] = new byte[bufferSize];
+
+								bool readThreadReady = false, readThreadError = false;
+								bool writeThreadReady = false, writeThreadError = false;
+								long totalReadSize = 0, totalWriteSize = 0;
+
+								bool readThreadAlive;
+								void ReadThread(object obj)
+								{
+									try
+									{
+										do
+										{
+											while (totalWriteSize != totalReadSize) Thread.Sleep(1);// wait for buffer to be written
+											Monitor.Enter(lockObj);
+											if (writeThreadError) break;
+											readThreadReady = true;// read thread is ready after lock
+											var buffer = buffers[bufferSwap];
+
+											int size = (int)Math.Min(buffer.LongLength, endRead - read);
+											Console.WriteLine($"Reading buffer: Offset:{read} Size:{size}");
+											bufferSizes[bufferSwap] = fileStream.Read(buffer, 0, size);// blast read here instead of async read to avoid IO lag
+											if (bufferSizes[bufferSwap] <= 0) break;
+											read += bufferSizes[bufferSwap];
+											totalReadSize += bufferSizes[bufferSwap];
+
+											bufferSwap = 1 - bufferSwap;// swap buffer
+											Monitor.Exit(lockObj);
+
+											while (!writeThreadReady) Thread.Sleep(1);// wait for write thread to get into lock state
+										} while (read < endRead && !writeThreadError);
+									}
+									catch (Exception e)
+									{
+										Console.WriteLine(e);
+										readThreadError = true;
+									}
+									readThreadReady = true;// make sure thread marked as ready if error
+									readThreadAlive = false;
+								}
+
+								bool writeThreadAlive;
+								void WriteThread(object obj)
+								{
+									try
+									{
+										while (!readThreadReady) Thread.Sleep(1);// wait for read thread to get into lock state
+										do
+										{
+											Monitor.Enter(lockObj);
+											if (readThreadError) break;
+											writeThreadReady = true;
+											int writtenBufferSwap = 1 - bufferSwap;
+											var buffer = buffers[writtenBufferSwap];// grab buffer while in lock
+											int size = bufferSizes[writtenBufferSwap];// grab current size
+											Console.WriteLine($"Writing buffer: Size:{size}");
+											Monitor.Exit(lockObj);
+
+											totalWriteSize += size;
+											response.OutputStream.Write(buffer, 0, size);// write buffer outside lock
+
+										} while (read < endRead && !readThreadError);
+									}
+									catch (Exception e)
+									{
+										Console.WriteLine(e);
+										writeThreadError = true;
+									}
+									writeThreadReady = true;// make sure thread marked as ready if error
+									writeThreadAlive = false;
+								}
+
+								var readThread = new Thread(ReadThread);
+								readThread.IsBackground = true;
+								readThread.Priority = ThreadPriority.Normal;
+								readThreadAlive = true;
+								readThread.Start();
+
+								var writeThread = new Thread(WriteThread);
+								writeThread.IsBackground = true;
+								writeThread.Priority = ThreadPriority.Highest;
+								writeThreadAlive = true;
+								writeThread.Start();
+
+								while (readThreadAlive || writeThreadAlive) await Task.Yield();
+								#else
+								var buffer = new byte[bufferSize];
 								do
 								{
 									int size = fileStream.Read(buffer, 0, (int)Math.Min(buffer.LongLength, endRead - read));// blast read here instead of async read to avoid IO lag
@@ -443,6 +540,7 @@ namespace VLCVideoShare
 									read += size;
 									await response.OutputStream.WriteAsync(buffer, 0, size);
 								} while (read < endRead);
+								#endif
 							}
 							else// normal download request
 							{
