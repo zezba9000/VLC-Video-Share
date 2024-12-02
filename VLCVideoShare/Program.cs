@@ -432,10 +432,11 @@ namespace VLCVideoShare
 								response.ContentLength64 = (end - start) + 1;
 								response.AddHeader("Content-Range", $"bytes {start}-{end}/{totalLength}");
 								response.AddHeader("Accept-Ranges", "bytes");
-								response.AddHeader("Content-Disposition", $"attachment; filename=\"{Path.GetFileName(requestQuePath)}\"");
+								string filename = Path.GetFileName(requestQuePath);
+								response.AddHeader("Content-Disposition", $"attachment; filename=\"{filename}\"");
 
 								// Copy the file stream to the response output stream
-								const int bufferSize = 1024 * 1024 * 128;// 128mb
+								const int bufferSize = 1024 * 1024 * 512;// 512mb
 								fileStream.Seek(start, SeekOrigin.Begin);
 								long read = start, endRead = end + 1;
 
@@ -460,20 +461,21 @@ namespace VLCVideoShare
 										do
 										{
 											while (totalWriteSize != totalReadSize) Thread.Sleep(1);// wait for buffer to be written
-											Monitor.Enter(lockObj);
-											if (writeThreadError) break;
-											readThreadReady = true;// read thread is ready after lock
-											var buffer = buffers[bufferSwap];
+											lock (lockObj)
+											{
+												if (writeThreadError) break;
+												readThreadReady = true;// read thread is ready after lock
+												var buffer = buffers[bufferSwap];
 
-											int size = (int)Math.Min(buffer.LongLength, endRead - read);
-											Console.WriteLine($"Reading buffer: Offset:{read} Size:{size}");
-											bufferSizes[bufferSwap] = fileStream.Read(buffer, 0, size);// blast read here instead of async read to avoid IO lag
-											if (bufferSizes[bufferSwap] <= 0) break;
-											read += bufferSizes[bufferSwap];
-											totalReadSize += bufferSizes[bufferSwap];
+												int size = (int)Math.Min(buffer.LongLength, endRead - read);
+												Console.WriteLine($"Reading buffer: Offset:{read} Size:{size} '{filename}'");
+												bufferSizes[bufferSwap] = fileStream.Read(buffer, 0, size);// blast read here instead of async read to avoid IO lag
+												if (bufferSizes[bufferSwap] <= 0) break;
+												read += bufferSizes[bufferSwap];
+												totalReadSize += bufferSizes[bufferSwap];
 
-											bufferSwap = 1 - bufferSwap;// swap buffer
-											Monitor.Exit(lockObj);
+												bufferSwap = 1 - bufferSwap;// swap buffer
+											}
 
 											while (!writeThreadReady) Thread.Sleep(1);// wait for write thread to get into lock state
 										} while (read < endRead && !writeThreadError);
@@ -495,14 +497,17 @@ namespace VLCVideoShare
 										while (!readThreadReady) Thread.Sleep(1);// wait for read thread to get into lock state
 										do
 										{
-											Monitor.Enter(lockObj);
-											if (readThreadError) break;
-											writeThreadReady = true;
-											int writtenBufferSwap = 1 - bufferSwap;
-											var buffer = buffers[writtenBufferSwap];// grab buffer while in lock
-											int size = bufferSizes[writtenBufferSwap];// grab current size
-											Console.WriteLine($"Writing buffer: Size:{size}");
-											Monitor.Exit(lockObj);
+											byte[] buffer;
+											int size;
+											lock (lockObj)
+											{
+												if (readThreadError) break;
+												writeThreadReady = true;
+												int writtenBufferSwap = 1 - bufferSwap;
+												buffer = buffers[writtenBufferSwap];// grab buffer while in lock
+												size = bufferSizes[writtenBufferSwap];// grab current size
+												Console.WriteLine($"Writing chunk: Size:{size} '{filename}'");
+											}
 
 											totalWriteSize += size;
 											response.OutputStream.Write(buffer, 0, size);// write buffer outside lock
