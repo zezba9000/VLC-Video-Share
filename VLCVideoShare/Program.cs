@@ -454,14 +454,15 @@ namespace VLCVideoShare
 								bool writeThreadReady = false, writeThreadError = false;
 								long totalReadSize = 0, totalWriteSize = 0;
 
-								bool readThreadAlive;
+								bool readThreadAlive = false, writeThreadAlive = false;
+
 								void ReadThread(object obj)
 								{
 									try
 									{
 										do
 										{
-											while (totalWriteSize != totalReadSize) Thread.Sleep(1);// wait for buffer to be written
+											while (totalWriteSize != totalReadSize && writeThreadAlive) Thread.Sleep(1);// wait for buffer to be written
 											lock (lockObj)
 											{
 												if (writeThreadError) break;
@@ -477,19 +478,18 @@ namespace VLCVideoShare
 												bufferSwap = 1 - bufferSwap;// swap buffer
 											}
 
-											while (!writeThreadReady) Thread.Sleep(1);// wait for write thread to get into lock state
+											while (!writeThreadReady && readThreadAlive) Thread.Sleep(1);// wait for write thread to get into lock state
 										} while (read < endRead && !writeThreadError);
 									}
 									catch (Exception e)
 									{
-										Console.WriteLine(e);
+										Console.WriteLine(e.Message);
 										readThreadError = true;
 									}
 									readThreadReady = true;// make sure thread marked as ready if error
 									readThreadAlive = false;
 								}
 
-								bool writeThreadAlive;
 								void WriteThread(object obj)
 								{
 									try
@@ -516,7 +516,7 @@ namespace VLCVideoShare
 									}
 									catch (Exception e)
 									{
-										Console.WriteLine(e);
+										Console.WriteLine(e.Message);
 										writeThreadError = true;
 									}
 									writeThreadReady = true;// make sure thread marked as ready if error
