@@ -44,6 +44,7 @@ namespace VLCVideoShare
 			string path = Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\", "TestVideos").Replace('\\', Path.DirectorySeparatorChar);
 			path = Path.GetFullPath(path);
 			sharePaths.Add(path);
+			sharePaths.Add(@"G:\Movies");
 			#else
 			if (args != null && args.Length != 0)
 			{
@@ -471,7 +472,7 @@ namespace VLCVideoShare
 												if (bufferSizes[bufferSwap] <= 0) break;
 												read += bufferSizes[bufferSwap];
 												totalReadSize += bufferSizes[bufferSwap];
-												Console.WriteLine($"Reading buffer: Offset:{read} Size:{bufferSizes[bufferSwap]} '{filename}'");
+												Console.WriteLine($"Read chunk: Offset:{read} Size:{bufferSizes[bufferSwap]} '{filename}'");
 
 												bufferSwap = 1 - bufferSwap;// swap buffer
 											}
@@ -545,6 +546,8 @@ namespace VLCVideoShare
 									await response.OutputStream.WriteAsync(buffer, 0, size);
 								} while (read < endRead);
 								#endif
+
+								Console.WriteLine("Stream finished");
 							}
 							else// normal download request
 							{
