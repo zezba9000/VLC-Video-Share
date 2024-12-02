@@ -467,12 +467,11 @@ namespace VLCVideoShare
 												readThreadReady = true;// read thread is ready after lock
 												var buffer = buffers[bufferSwap];
 
-												int size = (int)Math.Min(buffer.LongLength, endRead - read);
-												Console.WriteLine($"Reading buffer: Offset:{read} Size:{size} '{filename}'");
-												bufferSizes[bufferSwap] = fileStream.Read(buffer, 0, size);// blast read here instead of async read to avoid IO lag
+												bufferSizes[bufferSwap] = fileStream.Read(buffer, 0, (int)Math.Min(buffer.LongLength, endRead - read));// blast read here instead of async read to avoid IO lag
 												if (bufferSizes[bufferSwap] <= 0) break;
 												read += bufferSizes[bufferSwap];
 												totalReadSize += bufferSizes[bufferSwap];
+												Console.WriteLine($"Reading buffer: Offset:{read} Size:{bufferSizes[bufferSwap]} '{filename}'");
 
 												bufferSwap = 1 - bufferSwap;// swap buffer
 											}
