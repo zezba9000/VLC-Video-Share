@@ -362,7 +362,7 @@ namespace VLCVideoShare
 							// Set the response headers
 							response.ContentType = "text/plain";
 							response.ContentLength64 = stream.Length;
-							response.AddHeader("Content-Disposition", "attachment; filename=list.txt");
+							response.AddHeader("Content-Disposition", "attachment; filename=\"list.txt\"");
 
 							// Copy the file stream to the response output stream
 							await stream.CopyToAsync(response.OutputStream);
@@ -420,17 +420,17 @@ namespace VLCVideoShare
 								{
 									Console.WriteLine($"Invalid range request");
 									response.StatusCode = (int)HttpStatusCode.RequestedRangeNotSatisfiable;
-									response.Headers.Add("Content-Range", $"bytes */{totalLength}");
+									response.AddHeader("Content-Range", $"bytes */{totalLength}");
 									return;
 								}
 
 								// Set the response headers
 								response.StatusCode = (int)HttpStatusCode.PartialContent;
-								response.ContentLength64 = end - start;
-								response.Headers.Add("Content-Range", $"bytes {start}-{end}/{totalLength}");
-								response.Headers.Add("Content-Length", totalLength.ToString());
-								response.Headers.Add("Accept-Ranges", "bytes");
-								response.AddHeader("Content-Disposition", "attachment; filename=" + Path.GetFileName(requestQuePath));
+								response.ContentType = "application/octet-stream";
+								response.ContentLength64 = (end - start) + 1;
+								response.AddHeader("Content-Range", $"bytes {start}-{end}/{totalLength}");
+								response.AddHeader("Accept-Ranges", "bytes");
+								response.AddHeader("Content-Disposition", $"attachment; filename=\"{Path.GetFileName(requestQuePath)}\"");
 
 								// Copy the file stream to the response output stream
 								var buffer = new byte[1024 * 1024 * 128];// 128mb
@@ -438,7 +438,7 @@ namespace VLCVideoShare
 								long read = start, endRead = end + 1;
 								do
 								{
-									int size = fileStream.Read(buffer, 0, (int)Math.Min(buffer.LongLength, end - read));// blast read here instead of async read to avoid lag
+									int size = fileStream.Read(buffer, 0, (int)Math.Min(buffer.LongLength, endRead - read));// blast read here instead of async read to avoid IO lag
 									if (size <= 0) break;
 									read += size;
 									await response.OutputStream.WriteAsync(buffer, 0, size);
@@ -451,7 +451,7 @@ namespace VLCVideoShare
 								// Set the response headers
 								response.ContentType = "application/octet-stream";
 								response.ContentLength64 = fileStream.Length;
-								response.AddHeader("Content-Disposition", "attachment; filename=" + Path.GetFileName(requestQuePath));
+								response.AddHeader("Content-Disposition", $"attachment; filename=\"{Path.GetFileName(requestQuePath)}\"");
 
 								// Copy the file stream to the response output stream
 								await fileStream.CopyToAsync(response.OutputStream);
@@ -460,13 +460,13 @@ namespace VLCVideoShare
 						}
 					}
 				}
-				catch (Exception e2)
+				catch (Exception e)
 				{
 					// Handle any errors
 					response.StatusCode = (int)HttpStatusCode.InternalServerError;
-					byte[] errorBytes = Encoding.UTF8.GetBytes("Error: " + e2.Message);
+					byte[] errorBytes = Encoding.UTF8.GetBytes("Error: " + e.Message);
 					response.OutputStream.Write(errorBytes, 0, errorBytes.Length);
-					Console.WriteLine(e2);
+					Console.WriteLine(e);
 				}
 				finally
 				{
