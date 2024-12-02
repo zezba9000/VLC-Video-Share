@@ -305,12 +305,14 @@ namespace VLCVideoShare
 						else
 						{
 							var folderValues = Directory.GetDirectories(requestQuePath);
+							Array.Sort(folderValues);
 							folders = new string[folderValues.Length + metaDataCount];
 							folders[0] = requestQuePath;// metadata: folder file path
 							folders[1] = lastFile;// metadata: last downloaded file
 							for (int i = 0; i != folderValues.Length; ++i) folders[i + metaDataCount] = folderValues[i];
 
 							files = Directory.GetFiles(requestQuePath);
+							Array.Sort(files);
 						}
 
 						// send files
