@@ -1,5 +1,6 @@
 ﻿#define ALLOW_DEBUG_PATH
 #define USE_STREAM_THREADS
+//#define USE_STREAM_THREADS_DUAL
 
 using Reign;
 using System;
@@ -442,6 +443,67 @@ namespace VLCVideoShare
 								long read = start, endRead = end + 1;
 
 								#if USE_STREAM_THREADS
+								var lockObj = new object();
+
+								int bufferSwap = 0;
+								var bufferSizes = new int[2];
+								var buffers = new byte[2][];
+								buffers[0] = new byte[bufferSize];
+								buffers[1] = new byte[bufferSize];
+
+								bool readThreadAlive = false;
+								void ReadThread(object obj)
+								{
+									try
+									{
+										var buffer = buffers[bufferSwap];
+										int size = (int)Math.Min(buffer.LongLength, endRead - read);
+										bufferSizes[bufferSwap] = fileStream.Read(buffer, 0, size);// blast read here instead of async read to avoid IO lag
+										if (bufferSizes[bufferSwap] <= 0) throw new Exception("Read zero bytes");
+										read += bufferSizes[bufferSwap];
+										bufferSwap = 1 - bufferSwap;// swap buffer
+									}
+									catch (Exception e)
+									{
+										Console.WriteLine(e.Message);
+									}
+									readThreadAlive = false;
+								}
+
+								Thread readThread;
+								void LoadNextChunk()
+								{
+									var buffer = buffers[bufferSwap];
+									int size = (int)Math.Min(buffer.LongLength, endRead - read);
+									Console.WriteLine($"Reading chunk: Offset:{read} Size:{size} '{filename}'");
+
+									readThread = new Thread(ReadThread);
+									readThread.IsBackground = true;
+									readThread.Priority = ThreadPriority.Lowest;
+									readThreadAlive = true;
+									readThread.Start();
+								}
+
+								LoadNextChunk();// load first chunk
+								long write = start;
+								while (write < endRead)
+								{
+									// wait for data chunk
+									while (readThreadAlive) await Task.Yield();
+
+									// pre-load next chunk
+									int bufferSwapWrite = 1 - bufferSwap;
+									long lastRead = read;
+									LoadNextChunk();
+
+									// write last data chunk
+									var buffer = buffers[bufferSwapWrite];
+									int size = bufferSizes[bufferSwapWrite];
+									Console.WriteLine($"Writing chunk: Offset:{lastRead} Size:{size} '{filename}'");
+									await response.OutputStream.WriteAsync(buffer, 0, size);
+									write += size;
+								}
+								#elif USE_STREAM_THREADS_DUAL
 								var lockObj = new object();
 
 								int bufferSwap = 0;
