@@ -45,7 +45,7 @@ namespace VLCVideoShare
 			string path = Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\", "TestVideos").Replace('\\', Path.DirectorySeparatorChar);
 			path = Path.GetFullPath(path);
 			sharePaths.Add(path);
-			sharePaths.Add(@"G:\Movies");
+			//sharePaths.Add(@"G:\Movies");
 			#else
 			if (args != null && args.Length != 0)
 			{
@@ -460,7 +460,7 @@ namespace VLCVideoShare
 									{
 										var buffer = buffers[bufferSwap];
 										int size = (int)Math.Min(buffer.LongLength, endRead - read);
-										bufferSizes[bufferSwap] = fileStream.Read(buffer, 0, size);// blast read here instead of async read to avoid IO lag
+										bufferSizes[bufferSwap] = fileStream.Read(buffer, 0, size);
 										if (bufferSizes[bufferSwap] <= 0) throw new Exception("Read zero bytes");
 										read += bufferSizes[bufferSwap];
 										bufferSwap = 1 - bufferSwap;// swap buffer
