@@ -11,6 +11,7 @@ using System.Net.Sockets;
 using System.Runtime;
 using System.Text;
 using System.Threading;
+using System.Security.Cryptography;
 
 namespace VLCVideoShare
 {
@@ -89,6 +90,19 @@ namespace VLCVideoShare
 			{
 				Console.WriteLine("No share paths");
 				return;
+			}
+
+			// hash password
+			using (var sha256 = SHA256.Create())
+			{
+				byte[] bytes = Encoding.UTF8.GetBytes(password);
+				byte[] hash = sha256.ComputeHash(bytes);
+				var builder = new StringBuilder();
+				foreach (byte b in hash)
+				{
+					builder.Append(b.ToString("x2")); // Convert each byte to a hex string
+				}
+				password = builder.ToString();
 			}
 
 			// start http thread

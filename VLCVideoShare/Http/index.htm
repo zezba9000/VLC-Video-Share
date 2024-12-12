@@ -36,6 +36,8 @@
             background-color: #0056b3;
         }
     </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.2.0/sha.js"></script>
 </head>
 
 <body>
@@ -209,13 +211,19 @@
                             container.textContent = 'Password:\u00A0';
 
                             const passInput = document.createElement('input');
-                            passInput.type = 'text';
+                            passInput.type = 'password';
                             passInput.value = pass;
 
                             const refreshButton = document.createElement('button');
                             refreshButton.textContent = 'Refresh';
                             refreshButton.addEventListener('click', function () {
-                                pass = passInput.value;
+
+                                // hack password
+                                var hash = new jsSHA("SHA-256", "TEXT", { numRounds: 1 });
+                                hash.update(passInput.value);
+                                pass = hash.getHash("HEX");
+                                passInput.value = pass;
+
                                 window.location.href = '/?pass=' + pass + '&path=' + encodeURIComponent(folderPath);
                             });
 
