@@ -93,7 +93,7 @@ namespace VLCVideoShare
 			}
 
 			// hash password
-			using (var sha256 = SHA256.Create())
+			/*using (var sha256 = SHA256.Create())
 			{
 				byte[] bytes = Encoding.UTF8.GetBytes(password);
 				byte[] hash = sha256.ComputeHash(bytes);
@@ -103,7 +103,7 @@ namespace VLCVideoShare
 					builder.Append(b.ToString("x2")); // Convert each byte to a hex string
 				}
 				password = builder.ToString();
-			}
+			}*/
 
 			// start http thread
 			Console.WriteLine("Type 'q' to exit");

@@ -218,12 +218,12 @@
                             refreshButton.textContent = 'Refresh';
                             refreshButton.addEventListener('click', function () {
 
-                                // hack password
-                                var hash = new jsSHA("SHA-256", "TEXT", { numRounds: 1 });
+                                // hash password
+                                /*var hash = new jsSHA("SHA-256", "TEXT", { numRounds: 1 });
                                 hash.update(passInput.value);
-                                pass = hash.getHash("HEX");
-                                passInput.value = pass;
+                                passInput.value = hash.getHash("HEX");*/
 
+                                pass = passInput.value;
                                 window.location.href = '/?pass=' + pass + '&path=' + encodeURIComponent(folderPath);
                             });
 
