@@ -62,7 +62,7 @@
                 folderPath = decodeURIComponent(files);
             }
             else {
-                window.location.href = '/?pass=' + pass + '&path=$root$';
+                window.location.href = '?path=$root$' + '/&pass=' + pass;
                 return;
             }
 
@@ -99,7 +99,7 @@
                     listItem.textContent = `${filenameOnly} - ${fileSize}`;
 
                     filename = encodeURIComponent(filename);
-                    const url = externalAddress + '?pass=' + pass + '&download=' + filename;
+                    const url = externalAddress + '?download=' + filename + '&pass=' + pass;
 
                     // most browsers have codex issues with video/audio data (use VLC instead)
                     /*const playButton = document.createElement('button');
@@ -185,7 +185,8 @@
                     lines.forEach(line => {
                         console.log('ResponseLine: ' + line);
                         if (itemCount === 0) {
-                            const serverIP = `${window.location.protocol}//${line.trim()}/`;
+                            const url = new URL('https://example.com:8080/path/to/resource');
+                            const serverIP = `${window.location.protocol}//${line.trim()}:${url.port}/`;
 
                             const container = document.createElement('div');
                             const checkbox = document.createElement('input');
