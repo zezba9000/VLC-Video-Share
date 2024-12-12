@@ -57,6 +57,7 @@
             const files = urlParams.get('path');
             var pass = urlParams.get('pass');
             var useExternalAddress = urlParams.get('use-external');
+            if (!useExternalAddress) useExternalAddress = 'true';
             if (!pass) pass = '';
             if (files) {
                 folderPath = decodeURIComponent(files);
