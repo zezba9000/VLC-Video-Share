@@ -52,13 +52,13 @@
             var folderPath = '$root$';
             const urlParams = new URLSearchParams(window.location.search);
             const files = urlParams.get('path');
-            var user = urlParams.get('user');
-            if (!user) user = '';
+            var pass = urlParams.get('pass');
+            if (!pass) pass = '';
             if (files) {
                 folderPath = decodeURIComponent(files);
             }
             else {
-                window.location.href = '/?user=' + user + '&path=$root$';
+                window.location.href = '/?pass=' + pass + '&path=$root$';
                 return;
             }
 
@@ -73,13 +73,10 @@
 
             // Function to create a list item with a button
             function addListItem(filename) {
-                const exts = filename.split('.');
-                const ext = exts[exts.length - 1];
-                if (exts.length >= 2)// is file
-                {
-                    const parts = filename.split('^');
+                const parts = filename.split('^');
+                if (parts[1] === 'file') {
                     filename = parts[0];
-                    const fileSize = parts[1];
+                    const fileSize = parts[2];
 
                     const listItem = document.createElement('li');
                     listItem.className = 'filename';
@@ -90,7 +87,7 @@
                     listItem.textContent = `${filenameOnly} - ${fileSize}`;
 
                     filename = encodeURIComponent(filename);
-                    const url = baseUrl + '?user=' + user + '&download=' + filename;
+                    const url = baseUrl + '?pass=' + pass + '&download=' + filename;
 
                     // most browsers have codex issues with video/audio data (use VLC instead)
                     /*const playButton = document.createElement('button');
@@ -134,8 +131,8 @@
                     listItem.appendChild(container);
                     itemList.appendChild(listItem);
                 }
-                else if (exts.length === 1)// is folder
-                {
+                else if (parts[1] === 'folder') {
+                    filename = parts[0];
                     const listItem = document.createElement('li');
 
                     const folderButton = document.createElement('button');
@@ -144,11 +141,10 @@
                     else if (filename.includes('/')) name = filename.split('/').pop();
                     else name = filename;
 
-                    if (!name) folderButton.textContent = 'Folder: ' + filename;
-                    else folderButton.textContent = 'Folder: ' + name;
+                    folderButton.textContent = name;
                     folderButton.addEventListener('click', function () {
                         folderPath = filename;
-                        window.location.href = '/?user=' + user + '&path=' + encodeURIComponent(folderPath);
+                        window.location.href = '/?pass=' + pass + '&path=' + encodeURIComponent(folderPath);
                     });
 
                     const container = document.createElement('div');
@@ -157,11 +153,14 @@
                     listItem.appendChild(container);
                     itemList.appendChild(listItem);
                 }
+                else {
+                    console.error('Invalid listing: ' + filename);
+                }
             }
 
             async function loadFiles() {
                 try {
-                    const response = await fetch(baseUrl + '?user=' + user + '&files=' + encodeURIComponent(folderPath));
+                    const response = await fetch(baseUrl + '?pass=' + pass + '&files=' + encodeURIComponent(folderPath));
                     if (!response.ok) {
                         throw new Error(`Failed to fetch file: ${response.status}`);
                     }
@@ -172,8 +171,9 @@
                     // Populate the list with items
                     var itemCount = 0;
                     lines.forEach(line => {
-                        console.log(line);
-                        if (itemCount === 0) {// path we're in
+                        console.log('ResponseLine: ' + line);
+                        if (itemCount === 0) {
+                            // display current path
                             if (line === '') {
                                 const pathItem = document.createElement('div');
                                 pathItem.textContent = 'Home';
@@ -191,7 +191,7 @@
                                     else if (folderPath.includes('/')) folder = folderPath.split('/').pop();
                                     else folder = folderPath;
                                     folderPath = folderPath.substring(0, folderPath.length - (folder.length + 1));
-                                    window.location.href = '/?user=' + user + '&path=' + encodeURIComponent(folderPath);
+                                    window.location.href = '/?pass=' + pass + '&path=' + encodeURIComponent(folderPath);
                                 });
 
                                 const pathItem = document.createElement('div');
@@ -202,48 +202,30 @@
                                 itemList.appendChild(container);
                             }
                             itemList.appendChild(document.createElement('br'));
-                        }
-                        else if (itemCount === 1) {// last file downloaded
+
+                            // password input
                             var container = document.createElement('div');
                             container.style = 'display: flex;';
-                            container.textContent = 'User:\u00A0';
+                            container.textContent = 'Password:\u00A0';
 
-                            const userInput = document.createElement('input');
-                            userInput.type = 'text';
-                            userInput.value = user;
+                            const passInput = document.createElement('input');
+                            passInput.type = 'text';
+                            passInput.value = pass;
 
                             const refreshButton = document.createElement('button');
                             refreshButton.textContent = 'Refresh';
                             refreshButton.addEventListener('click', function () {
-                                user = userInput.value;
-                                window.location.href = '/?user=' + user + '&path=' + encodeURIComponent(folderPath);
+                                pass = passInput.value;
+                                window.location.href = '/?pass=' + pass + '&path=' + encodeURIComponent(folderPath);
                             });
 
-                            container.appendChild(userInput);
+                            container.appendChild(passInput);
                             container.appendChild(refreshButton);
                             itemList.appendChild(container);
                             itemList.appendChild(document.createElement('br'));
-                            if (line !== '') {
-                                container = document.createElement('div');
-                                container.style = 'display: flex;';
-                                container.textContent = 'Last Content:\u00A0';
-
-                                const lastOpened = document.createElement('input');
-                                lastOpened.readOnly = true;
-                                lastOpened.type = 'text';
-                                lastOpened.value = line;
-                                lastOpened.onfocus = () => {
-                                    setTimeout(() => {
-                                        lastOpened.select();
-                                    }, 250);
-                                }
-
-                                container.appendChild(lastOpened);
-                                itemList.appendChild(container);
-                                itemList.appendChild(document.createElement('br'));
-                            }
                         }
                         else {
+                            // add item entry
                             const lineTrimmed = line.trim();
                             if (lineTrimmed) {
                                 addListItem(lineTrimmed);

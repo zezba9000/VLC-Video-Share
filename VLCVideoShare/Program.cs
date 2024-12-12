@@ -1,6 +1,5 @@
 ﻿#define ALLOW_DEBUG_PATH
 #define USE_STREAM_THREADS
-//#define USE_STREAM_THREADS_DUAL
 
 using Reign;
 using System;
@@ -35,17 +34,17 @@ namespace VLCVideoShare
 		private static OpenedNATDevice natDevice;
 		private static bool openNAT;
 
-		private static Dictionary<string, string> lastUserFiles;
+		private static string password = string.Empty;
 
         static void Main(string[] args)
         {
 			// get paths
 			sharePaths = new List<string>();
 			#if DEBUG && ALLOW_DEBUG_PATH
+			password = "abc123";
 			string path = Path.Combine(Environment.CurrentDirectory, @"..\..\..\..\..\", "TestVideos").Replace('\\', Path.DirectorySeparatorChar);
 			path = Path.GetFullPath(path);
 			sharePaths.Add(path);
-			//sharePaths.Add(@"G:\Movies");
 			#else
 			if (args != null && args.Length != 0)
 			{
@@ -67,6 +66,17 @@ namespace VLCVideoShare
 						if (int.TryParse(values[1], out int portOverride)) port = portOverride;
 						else Console.WriteLine("Invalid port");
 					}
+					else if (arg == "--Pass=")
+					{
+						var values = arg.Split('=');
+						if (values.Length != 2)
+						{
+							Console.WriteLine("Invalid password override");
+							continue;
+						}
+
+						password = values[1];
+					}
 					else
 					{
 						sharePaths.Add(arg);
@@ -79,32 +89,6 @@ namespace VLCVideoShare
 			{
 				Console.WriteLine("No share paths");
 				return;
-			}
-
-			// load user files
-			lastUserFiles = new Dictionary<string, string>();
-			string userSettingsPath = Path.Combine(Environment.CurrentDirectory, "UserSettings.txt");
-			if (File.Exists(userSettingsPath))
-			{
-				try
-				{
-					using (var stream = File.OpenRead(userSettingsPath))
-					using (var reader = new StreamReader(stream))
-					{
-						while (stream.Position < stream.Length)
-						{
-							string line = reader.ReadLine();
-							if (string.IsNullOrEmpty(line)) continue;
-
-							var values = line.Split('^');
-							lastUserFiles.Add(values[0], values[1]);
-						}
-					}
-				}
-				catch (Exception e)
-				{
-					Console.WriteLine(e);
-				}
 			}
 
 			// start http thread
@@ -137,16 +121,6 @@ namespace VLCVideoShare
 			{
 				NATUtils.ClosePort(natDevice);
 				Console.WriteLine("NAT closed");
-			}
-
-			// save user files
-			using (var stream = File.OpenWrite(userSettingsPath))
-			using (var writer = new StreamWriter(stream))
-			{
-				foreach (var user in lastUserFiles)
-				{
-					writer.WriteLine($"{user.Key}^{user.Value}");
-				}
 			}
         }
 
@@ -218,7 +192,7 @@ namespace VLCVideoShare
 				response.StatusCode = (int)HttpStatusCode.OK;// default ok
 
 				// check query string
-				string user = string.Empty;
+				string requestPass = string.Empty;
 				var requestType = RequestType.Normal;
 				string requestQuePath = null;
 				foreach (var queryKey in request.QueryString.AllKeys)
@@ -234,9 +208,9 @@ namespace VLCVideoShare
 						requestType = RequestType.DownloadFile;
 						requestQuePath = queryValue;
 					}
-					else if (queryKey == "user")
+					else if (queryKey == "pass")
 					{
-						user = queryValue;
+						requestPass = queryValue.Trim();
 					}
 				}
 
@@ -293,13 +267,11 @@ namespace VLCVideoShare
 
 						// grab files
 						string[] folders, files = null;
-						const int metaDataCount = 2;
-						string lastFile = lastUserFiles.ContainsKey(user) ? lastUserFiles[user] : string.Empty;
+						const int metaDataCount = 1;
 						if (requestQuePath == "$root$")
 						{
 							folders = new string[sharePaths.Count + metaDataCount];
 							folders[0] = string.Empty;// root is blank here
-							folders[1] = lastFile;// metadata: last downloaded file
 							for (int i = 0; i != sharePaths.Count; ++i) folders[i + metaDataCount] = sharePaths[i];
 						}
 						else
@@ -308,7 +280,6 @@ namespace VLCVideoShare
 							Array.Sort(folderValues);
 							folders = new string[folderValues.Length + metaDataCount];
 							folders[0] = requestQuePath;// metadata: folder file path
-							folders[1] = lastFile;// metadata: last downloaded file
 							for (int i = 0; i != folderValues.Length; ++i) folders[i + metaDataCount] = folderValues[i];
 
 							files = Directory.GetFiles(requestQuePath);
@@ -327,21 +298,21 @@ namespace VLCVideoShare
 								{
 									writer.Write('\n');// write blank root
 								}
-								else if (count < 2)
+								else if (count < metaDataCount)
 								{
 									writer.Write($"{folder}\n");
 								}
-								else
+								else if (requestPass == password)
 								{
 									var info = new DirectoryInfo(folder);
 									if ((info.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden) continue;
-									writer.Write($"{folder}\n");
+									writer.Write($"{folder}^folder\n");
 								}
 								count++;
 							}
 
 							// write file list to memory
-							if (files != null)
+							if (files != null && requestPass == password)
 							{
 								foreach (string file in files)
 								{
@@ -357,7 +328,7 @@ namespace VLCVideoShare
 									else if (mb < 1024) sizeInfo = $"{mb} MB";
 									else sizeInfo = $"{gb} GB";
 
-									writer.Write($"{file}^{sizeInfo}\n");
+									writer.Write($"{file}^file^{sizeInfo}\n");
 								}
 							}
 
@@ -377,6 +348,11 @@ namespace VLCVideoShare
 					else if (requestType == RequestType.DownloadFile)
 					{
 						Console.WriteLine($"Requested to download or stream file: '{requestQuePath}'");
+						if (requestPass != password)
+						{
+							Console.WriteLine($"Invalid password {requestPass} != {password}");
+							return;
+						}
 
 						// detect if we went back home
 						bool isValidSharePath = false;
@@ -394,12 +370,6 @@ namespace VLCVideoShare
 							response.StatusCode = (int)HttpStatusCode.BadRequest;
 							Console.WriteLine("Non-valid share file requested");
 							return;
-						}
-
-						// store last user file
-						if (!string.IsNullOrEmpty(user))
-						{
-							lastUserFiles[user] = request.Url.OriginalString;
 						}
 
 						// serve file to client
@@ -505,101 +475,6 @@ namespace VLCVideoShare
 									await response.OutputStream.WriteAsync(buffer, 0, size);
 									write += size;
 								}
-								#elif USE_STREAM_THREADS_DUAL
-								var lockObj = new object();
-
-								int bufferSwap = 0;
-								var bufferSizes = new int[2];
-								var buffers = new byte[2][];
-								buffers[0] = new byte[bufferSize];
-								buffers[1] = new byte[bufferSize];
-
-								bool readThreadReady = false, readThreadError = false;
-								bool writeThreadReady = false, writeThreadError = false;
-								long totalReadSize = 0, totalWriteSize = 0;
-
-								bool readThreadAlive = false, writeThreadAlive = false;
-
-								void ReadThread(object obj)
-								{
-									try
-									{
-										do
-										{
-											while (totalWriteSize != totalReadSize && writeThreadAlive) Thread.Sleep(1);// wait for buffer to be written
-											lock (lockObj)
-											{
-												if (writeThreadError) break;
-												readThreadReady = true;// read thread is ready after lock
-												var buffer = buffers[bufferSwap];
-
-												bufferSizes[bufferSwap] = fileStream.Read(buffer, 0, (int)Math.Min(buffer.LongLength, endRead - read));// blast read here instead of async read to avoid IO lag
-												if (bufferSizes[bufferSwap] <= 0) break;
-												read += bufferSizes[bufferSwap];
-												totalReadSize += bufferSizes[bufferSwap];
-												Console.WriteLine($"Read chunk: Offset:{read} Size:{bufferSizes[bufferSwap]} '{filename}'");
-
-												bufferSwap = 1 - bufferSwap;// swap buffer
-											}
-
-											while (!writeThreadReady && readThreadAlive) Thread.Sleep(1);// wait for write thread to get into lock state
-										} while (read < endRead && !writeThreadError);
-									}
-									catch (Exception e)
-									{
-										Console.WriteLine(e.Message);
-										readThreadError = true;
-									}
-									readThreadReady = true;// make sure thread marked as ready if error
-									readThreadAlive = false;
-								}
-
-								void WriteThread(object obj)
-								{
-									try
-									{
-										while (!readThreadReady) Thread.Sleep(1);// wait for read thread to get into lock state
-										do
-										{
-											byte[] buffer;
-											int size;
-											lock (lockObj)
-											{
-												if (readThreadError) break;
-												writeThreadReady = true;
-												int writtenBufferSwap = 1 - bufferSwap;
-												buffer = buffers[writtenBufferSwap];// grab buffer while in lock
-												size = bufferSizes[writtenBufferSwap];// grab current size
-												Console.WriteLine($"Writing chunk: Size:{size} '{filename}'");
-											}
-
-											totalWriteSize += size;
-											response.OutputStream.Write(buffer, 0, size);// write buffer outside lock
-
-										} while (read < endRead && !readThreadError);
-									}
-									catch (Exception e)
-									{
-										Console.WriteLine(e.Message);
-										writeThreadError = true;
-									}
-									writeThreadReady = true;// make sure thread marked as ready if error
-									writeThreadAlive = false;
-								}
-
-								var readThread = new Thread(ReadThread);
-								readThread.IsBackground = true;
-								readThread.Priority = ThreadPriority.Normal;
-								readThreadAlive = true;
-								readThread.Start();
-
-								var writeThread = new Thread(WriteThread);
-								writeThread.IsBackground = true;
-								writeThread.Priority = ThreadPriority.Highest;
-								writeThreadAlive = true;
-								writeThread.Start();
-
-								while (readThreadAlive || writeThreadAlive) await Task.Yield();
 								#else
 								var buffer = new byte[bufferSize];
 								do
