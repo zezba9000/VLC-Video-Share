@@ -51,11 +51,11 @@ namespace VLCVideoShare
 			{
 				foreach (var arg in args)
 				{
-					if (arg == "--OpenNAT")
+					if (arg.StartsWith("--OpenNAT"))
 					{
 						openNAT = true;
 					}
-					else if (arg == "--Port=")
+					else if (arg.StartsWith("--Port="))
 					{
 						var values = arg.Split('=');
 						if (values.Length != 2)
@@ -67,7 +67,7 @@ namespace VLCVideoShare
 						if (int.TryParse(values[1], out int portOverride)) port = portOverride;
 						else Console.WriteLine("Invalid port");
 					}
-					else if (arg == "--Pass=")
+					else if (arg.StartsWith("--Pass="))
 					{
 						var values = arg.Split('=');
 						if (values.Length != 2)
