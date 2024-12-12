@@ -9,35 +9,35 @@
             padding: 0;
         }
 
-        #itemList li {
-            margin: 5px 0;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+            #itemList li {
+                margin: 5px 0;
+                padding: 10px;
+                background-color: #f9f9f9;
+                border: 1px solid #ddd;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
 
-        #itemList .filename:nth-child(2n+1) {
-            background-color: #e0e0e0;
-        }
+            #itemList .filename:nth-child(2n+1) {
+                background-color: #e0e0e0;
+            }
 
-        #itemList button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            margin: 0px 8px;
-            cursor: pointer;
-        }
+            #itemList button {
+                background-color: #007bff;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                margin: 0px 8px;
+                cursor: pointer;
+            }
 
-        #itemList button:hover {
-            background-color: #0056b3;
-        }
+                #itemList button:hover {
+                    background-color: #0056b3;
+                }
     </style>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.2.0/sha.js"></script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.2.0/sha.js"></script>-->
 </head>
 
 <body>
@@ -49,12 +49,14 @@
         {
             const itemList = document.getElementById('itemList');
             const baseUrl = `${window.location.protocol}//${window.location.host}/`;
+            var externalAddress = baseUrl;
 
             // get folder path
             var folderPath = '$root$';
             const urlParams = new URLSearchParams(window.location.search);
             const files = urlParams.get('path');
             var pass = urlParams.get('pass');
+            var useExternalAddress = urlParams.get('use-external');
             if (!pass) pass = '';
             if (files) {
                 folderPath = decodeURIComponent(files);
@@ -73,6 +75,14 @@
 
             const isMobilePlatform = mobileAndTabletCheck();
 
+            function getNavigation() {
+                return '?path=' + encodeURIComponent(folderPath) + '&pass=' + pass + '&use-external=' + useExternalAddress;
+            }
+
+            function reload() {
+                window.location.href = '/' + getNavigation();
+            }
+
             // Function to create a list item with a button
             function addListItem(filename) {
                 const parts = filename.split('^');
@@ -89,7 +99,7 @@
                     listItem.textContent = `${filenameOnly} - ${fileSize}`;
 
                     filename = encodeURIComponent(filename);
-                    const url = baseUrl + '?pass=' + pass + '&download=' + filename;
+                    const url = externalAddress + '?pass=' + pass + '&download=' + filename;
 
                     // most browsers have codex issues with video/audio data (use VLC instead)
                     /*const playButton = document.createElement('button');
@@ -146,7 +156,7 @@
                     folderButton.textContent = name;
                     folderButton.addEventListener('click', function () {
                         folderPath = filename;
-                        window.location.href = '/?pass=' + pass + '&path=' + encodeURIComponent(folderPath);
+                        reload();
                     });
 
                     const container = document.createElement('div');
@@ -162,7 +172,7 @@
 
             async function loadFiles() {
                 try {
-                    const response = await fetch(baseUrl + '?pass=' + pass + '&files=' + encodeURIComponent(folderPath));
+                    const response = await fetch(baseUrl + '?files=' + encodeURIComponent(folderPath) + '&pass=' + pass + '&use-external=' + useExternalAddress);
                     if (!response.ok) {
                         throw new Error(`Failed to fetch file: ${response.status}`);
                     }
@@ -175,8 +185,35 @@
                     lines.forEach(line => {
                         console.log('ResponseLine: ' + line);
                         if (itemCount === 0) {
+                            const serverIP = `${window.location.protocol}//${line.trim()}/`;
+
+                            const container = document.createElement('div');
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.checked = useExternalAddress == 'true' ? true : false;
+
+                            const label = document.createElement('label');
+                            label.htmlFor = 'dynamicCheckbox';
+                            label.textContent = 'Use External Address';
+
+                            container.appendChild(checkbox);
+                            container.appendChild(label);
+                            itemList.appendChild(container);
+                            itemList.appendChild(document.createElement('br'));
+
+                            checkbox.addEventListener('click', () => {
+                                useExternalAddress = checkbox.checked ? 'true' : 'false';
+                                externalAddress = serverIP;
+                                reload();
+                            });
+
+                            if (checkbox.checked) {
+                                externalAddress = serverIP;
+                            }
+                        }
+                        else if (itemCount === 1) {
                             // display current path
-                            if (line === '') {
+                            if (line === '' || line === '$root$') {
                                 const pathItem = document.createElement('div');
                                 pathItem.textContent = 'Home';
                                 itemList.appendChild(pathItem);
@@ -193,7 +230,7 @@
                                     else if (folderPath.includes('/')) folder = folderPath.split('/').pop();
                                     else folder = folderPath;
                                     folderPath = folderPath.substring(0, folderPath.length - (folder.length + 1));
-                                    window.location.href = '/?pass=' + pass + '&path=' + encodeURIComponent(folderPath);
+                                    reload();
                                 });
 
                                 const pathItem = document.createElement('div');
@@ -224,7 +261,7 @@
                                 passInput.value = hash.getHash("HEX");*/
 
                                 pass = passInput.value;
-                                window.location.href = '/?pass=' + pass + '&path=' + encodeURIComponent(folderPath);
+                                reload();
                             });
 
                             container.appendChild(passInput);

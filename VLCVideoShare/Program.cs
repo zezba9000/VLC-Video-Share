@@ -36,6 +36,7 @@ namespace VLCVideoShare
 		private static bool openNAT;
 
 		private static string password = string.Empty;
+		private static string externalAddress = "0.0.0.0";
 
         static void Main(string[] args)
         {
@@ -140,6 +141,9 @@ namespace VLCVideoShare
 
         private static async void HttpThread(object obj)
         {
+			// get external address
+			GetExternalIPAddress();
+
             // find specific endpoint
 			#if DEBUG
 			string address = "localhost";
@@ -281,11 +285,12 @@ namespace VLCVideoShare
 
 						// grab files
 						string[] folders, files = null;
-						const int metaDataCount = 1;
+						const int metaDataCount = 2;
 						if (requestQuePath == "$root$")
 						{
 							folders = new string[sharePaths.Count + metaDataCount];
-							folders[0] = string.Empty;// root is blank here
+							folders[0] = externalAddress;
+							folders[1] = string.Empty;// root is blank here
 							for (int i = 0; i != sharePaths.Count; ++i) folders[i + metaDataCount] = sharePaths[i];
 						}
 						else
@@ -293,7 +298,8 @@ namespace VLCVideoShare
 							var folderValues = Directory.GetDirectories(requestQuePath);
 							Array.Sort(folderValues);
 							folders = new string[folderValues.Length + metaDataCount];
-							folders[0] = requestQuePath;// metadata: folder file path
+							folders[0] = externalAddress;
+							folders[1] = requestQuePath;// metadata: folder file path
 							for (int i = 0; i != folderValues.Length; ++i) folders[i + metaDataCount] = folderValues[i];
 
 							files = Directory.GetFiles(requestQuePath);
@@ -310,7 +316,7 @@ namespace VLCVideoShare
 							{
 								if (string.IsNullOrEmpty(folder))
 								{
-									writer.Write('\n');// write blank root
+									writer.Write('\n');
 								}
 								else if (count < metaDataCount)
 								{
@@ -536,6 +542,26 @@ namespace VLCVideoShare
 			{
 				Console.WriteLine(e.Message);
 			}
+		}
+
+		private static async void GetExternalIPAddress()
+		{
+			Console.WriteLine("Getting external address...");
+			using (var httpClient = new HttpClient())
+			{
+				try
+				{
+					var response = await httpClient.GetAsync("https://api.ipify.org");
+					response.EnsureSuccessStatusCode();
+					externalAddress = await response.Content.ReadAsStringAsync();
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine("Failed to get external address: " + ex.Message);
+					externalAddress = "0.0.0.0";
+				}
+			}
+			Console.WriteLine("External address: " + externalAddress);
 		}
     }
 }
