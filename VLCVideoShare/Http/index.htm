@@ -130,16 +130,36 @@
                         }, 250);
                     }
 
-                    const downloadButton = document.createElement('a');
+                    /*const downloadButton = document.createElement('a');
                     downloadButton.textContent = 'Download';
                     downloadButton.href = url;
-                    downloadButton.download = filename;
+                    downloadButton.download = filename;*/
+
+                    const openButton = document.createElement('button');
+                    openButton.textContent = 'Play';
+                    openButton.download = filename;
+                    openButton.addEventListener('click', function () {
+                        var userAgent = navigator.userAgent.toLowerCase();
+                        if (/iphone|ipad|ipod/.test(userAgent)) {
+                            window.location.href = "vlc://" + url;
+                        }
+                        else if (/android/.test(userAgent)) {
+                            var intentUrl = "intent:" + url +
+                                "#Intent;" +
+                                "action=android.intent.action.VIEW;" +
+                                "type=video/*;" +
+                                "package=org.videolan.vlc;" +
+                                "end";
+                            window.location.href = intentUrl;
+                        }
+                    });
 
                     const container = document.createElement('div');
                     //container.appendChild(playButton);
                     //container.appendChild(copyButton);
                     container.appendChild(linkText);
-                    if (!isMobilePlatform) container.appendChild(downloadButton);
+                    //if (!isMobilePlatform) container.appendChild(downloadButton);
+                    if (isMobilePlatform) container.appendChild(openButton);
 
                     listItem.appendChild(container);
                     itemList.appendChild(listItem);
