@@ -12,6 +12,7 @@ using System.Runtime;
 using System.Text;
 using System.Threading;
 using System.Security.Cryptography;
+using System.Timers;
 
 namespace VLCVideoShare
 {
@@ -114,7 +115,7 @@ namespace VLCVideoShare
             httpThread.Start();
 
 			// handle events
-			while (true)
+			while (httpThreadAlive)
 			{
 				string value = Console.ReadLine();
 				if (value == "q") break;
@@ -143,6 +144,8 @@ namespace VLCVideoShare
         {
 			// get external address
 			GetExternalIPAddress();
+			var externalRefreshTime = TimeSpan.FromHours(24);
+			var timer = new System.Threading.Timer(GetExternalIPAddress_Timer, null, externalRefreshTime, externalRefreshTime);
 
             // find specific endpoint
 			#if DEBUG
@@ -171,7 +174,14 @@ namespace VLCVideoShare
 			// open NAT for port
 			if (openNAT)
 			{
-				natDevice = NATUtils.OpenPort(true, true, port, 60 * 60 * 8, "VLCVideoShare");
+				try
+				{
+					natDevice = NATUtils.OpenPort(true, true, port, 60 * 60 * 8, "VLCVideoShare");
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine("Failed to open NAT" + e.ToString());
+				}
 			}
 
 			// format URL
@@ -179,9 +189,17 @@ namespace VLCVideoShare
 
 			// create and start the HTTP listener
 			Console.WriteLine("Listening on " + address);
-			httpListener = new HttpListener();
-			httpListener.Prefixes.Add(address);
-			httpListener.Start();
+			try
+			{
+				httpListener = new HttpListener();
+				httpListener.Prefixes.Add(address);
+				httpListener.Start();
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine("Failed to start HTTP listener" + e.ToString());
+				goto SHUTDOWN;
+			}
 
 			// handle requests
 			while (httpThreadAlive)
@@ -199,9 +217,14 @@ namespace VLCVideoShare
 					Console.WriteLine(e.Message);
 				}
 			}
+
+			// shutdown
+			SHUTDOWN:;
+			timer.Dispose();
+			httpThreadAlive = false;
         }
 
-		private static async void ProcessRequest(HttpListenerContext context)
+        private static async void ProcessRequest(HttpListenerContext context)
 		{
 			try
 			{
@@ -289,7 +312,7 @@ namespace VLCVideoShare
 						if (requestQuePath == "$root$")
 						{
 							folders = new string[sharePaths.Count + metaDataCount];
-							folders[0] = externalAddress;
+							lock (httpThread) folders[0] = externalAddress;
 							folders[1] = string.Empty;// root is blank here
 							for (int i = 0; i != sharePaths.Count; ++i) folders[i + metaDataCount] = sharePaths[i];
 						}
@@ -298,7 +321,7 @@ namespace VLCVideoShare
 							var folderValues = Directory.GetDirectories(requestQuePath);
 							Array.Sort(folderValues);
 							folders = new string[folderValues.Length + metaDataCount];
-							folders[0] = externalAddress;
+							lock (httpThread) folders[0] = externalAddress;
 							folders[1] = requestQuePath;// metadata: folder file path
 							for (int i = 0; i != folderValues.Length; ++i) folders[i + metaDataCount] = folderValues[i];
 
@@ -544,6 +567,11 @@ namespace VLCVideoShare
 			}
 		}
 
+		private static void GetExternalIPAddress_Timer(object sender)
+        {
+            GetExternalIPAddress();
+        }
+
 		private static async void GetExternalIPAddress()
 		{
 			Console.WriteLine("Getting external address...");
@@ -553,12 +581,13 @@ namespace VLCVideoShare
 				{
 					var response = await httpClient.GetAsync("https://api.ipify.org");
 					response.EnsureSuccessStatusCode();
-					externalAddress = await response.Content.ReadAsStringAsync();
+					string result = await response.Content.ReadAsStringAsync();
+					lock (httpThread) externalAddress = result;
 				}
 				catch (Exception ex)
 				{
 					Console.WriteLine("Failed to get external address: " + ex.Message);
-					externalAddress = "0.0.0.0";
+					lock (httpThread) externalAddress = "0.0.0.0";
 				}
 			}
 			Console.WriteLine("External address: " + externalAddress);
