@@ -206,7 +206,7 @@
                     lines.forEach(line => {
                         console.log('ResponseLine: ' + line);
                         if (itemCount === 0) {
-                            const url = new URL('https://example.com:8080/path/to/resource');
+                            const url = new URL(window.location.href);
                             const serverIP = `${window.location.protocol}//${line.trim()}:${url.port}/`;
 
                             const container = document.createElement('div');
