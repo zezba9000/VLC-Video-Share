@@ -270,7 +270,7 @@ namespace VLCVideoShare
 						string path = Path.Combine(Environment.CurrentDirectory, "Http", urlPath);
 						#endif
 
-						Console.WriteLine($"{DateTime.Now} Requested file: '{path}'");
+						Console.WriteLine($"({DateTime.Now}) Requested file: '{path}'");
 						using (var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
 						{
 							// Set the response headers
@@ -284,7 +284,7 @@ namespace VLCVideoShare
 					}
 					else if (requestType == RequestType.RequestFiles)
 					{
-						Console.WriteLine($"{DateTime.Now} Requested files from: '{requestQuePath}'");
+						Console.WriteLine($"({DateTime.Now}) Requested files from: '{requestQuePath}'");
 
 						// detect if we went back home
 						if (requestQuePath != "$root$")
@@ -390,7 +390,7 @@ namespace VLCVideoShare
 					}
 					else if (requestType == RequestType.DownloadFile)
 					{
-						Console.WriteLine($"{DateTime.Now} Requested to download or stream file: '{requestQuePath}'");
+						Console.WriteLine($"({DateTime.Now}) Requested to download or stream file: '{requestQuePath}'");
 						if (requestPass != password)
 						{
 							Console.WriteLine($"Invalid password {requestPass} != {password}");
@@ -480,7 +480,7 @@ namespace VLCVideoShare
 									}
 									catch (Exception e)
 									{
-										Console.WriteLine($"{DateTime.Now} '{e.Message}'");
+										Console.WriteLine($"({DateTime.Now}) '{e.Message}'");
 									}
 									readThreadAlive = false;
 								}
@@ -490,7 +490,7 @@ namespace VLCVideoShare
 								{
 									var buffer = buffers[bufferSwap];
 									int size = (int)Math.Min(buffer.LongLength, endRead - read);
-									Console.WriteLine($"{DateTime.Now} Reading chunk: Offset:{read} Size:{size} '{filename}'");
+									Console.WriteLine($"({DateTime.Now}) Reading chunk: Offset:{read} Size:{size} '{filename}'");
 
 									readThread = new Thread(ReadThread);
 									readThread.IsBackground = true;
@@ -514,7 +514,7 @@ namespace VLCVideoShare
 									// write last data chunk
 									var buffer = buffers[bufferSwapWrite];
 									int size = bufferSizes[bufferSwapWrite];
-									Console.WriteLine($"{DateTime.Now} Writing chunk: Offset:{lastRead} Size:{size} '{filename}'");
+									Console.WriteLine($"({DateTime.Now}) Writing chunk: Offset:{lastRead} Size:{size} '{filename}'");
 									await response.OutputStream.WriteAsync(buffer, 0, size);
 									write += size;
 								}
@@ -529,11 +529,11 @@ namespace VLCVideoShare
 								} while (read < endRead);
 								#endif
 
-								Console.WriteLine($"{DateTime.Now} Stream finished");
+								Console.WriteLine($"({DateTime.Now}) Stream finished");
 							}
 							else// normal download request
 							{
-								Console.WriteLine($"{DateTime.Now} Full download...");
+								Console.WriteLine($"({DateTime.Now}) Full download...");
 
 								// Set the response headers
 								response.ContentType = "application/octet-stream";
@@ -542,7 +542,7 @@ namespace VLCVideoShare
 
 								// Copy the file stream to the response output stream
 								await fileStream.CopyToAsync(response.OutputStream);
-								Console.WriteLine($"{DateTime.Now} Download complete!");
+								Console.WriteLine($"({DateTime.Now}) Download complete!");
 							}
 						}
 					}
@@ -553,7 +553,7 @@ namespace VLCVideoShare
 					response.StatusCode = (int)HttpStatusCode.InternalServerError;
 					byte[] errorBytes = Encoding.UTF8.GetBytes("Error: " + e.Message);
 					response.OutputStream.Write(errorBytes, 0, errorBytes.Length);
-					Console.WriteLine($"{DateTime.Now} '{e}'");
+					Console.WriteLine($"({DateTime.Now}) '{e}'");
 				}
 				finally
 				{
@@ -563,7 +563,7 @@ namespace VLCVideoShare
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine($"{DateTime.Now} '{e.Message}'");
+				Console.WriteLine($"({DateTime.Now}) '{e.Message}'");
 			}
 		}
 
@@ -574,7 +574,7 @@ namespace VLCVideoShare
 
 		private static async void GetExternalIPAddress()
 		{
-			Console.WriteLine($"{DateTime.Now} Getting external address...");
+			Console.WriteLine($"({DateTime.Now}) Getting external address...");
 			using (var httpClient = new HttpClient())
 			{
 				try
@@ -586,11 +586,11 @@ namespace VLCVideoShare
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine($"{DateTime.Now} Failed to get external address: " + ex.Message);
+					Console.WriteLine($"({DateTime.Now}) Failed to get external address: " + ex.Message);
 					lock (httpThread) externalAddress = "0.0.0.0";
 				}
 			}
-			Console.WriteLine($"{DateTime.Now} External address: " + externalAddress);
+			Console.WriteLine($"({DateTime.Now}) External address: " + externalAddress);
 		}
     }
 }
