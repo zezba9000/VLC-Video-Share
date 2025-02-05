@@ -9,38 +9,51 @@
             padding: 0;
         }
 
-            #itemList li {
-                margin: 5px 0;
-                padding: 10px;
-                background-color: #f9f9f9;
-                border: 1px solid #ddd;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-            }
+        #itemList li {
+            margin: 5px 0;
+            padding: 10px;
+            background-color: #333333;
+            border: 1px solid #888888;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-            #itemList .filename:nth-child(2n+1) {
-                background-color: #e0e0e0;
-            }
+        #itemList .filename:nth-child(2n+1) {
+            background-color: #555555;
+        }
 
-            #itemList button {
-                background-color: #007bff;
-                color: white;
-                border: none;
-                padding: 5px 10px;
-                margin: 0px 8px;
-                cursor: pointer;
-            }
+		#itemList button {
+			background-color: #004A99;
+			color: #CCCCCC;
+			border: none;
+			padding: 5px 10px;
+			margin: 0px 8px;
+			cursor: pointer;
+		}
 
-                #itemList button:hover {
-                    background-color: #0056b3;
-                }
+        #itemList button:hover {
+            background-color: #0056b3;
+        }
+
+		#itemList div {
+			color: #999999;
+		}
+
+		#itemList li {
+			color: #CCCCCC;
+		}
+
+		#itemList input {
+            background-color: #000000;
+			color: #CCCCCC;
+		}
     </style>
 
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.2.0/sha.js"></script>-->
 </head>
 
-<body>
+<body style="background-color:#111111;">
 
     <ul id="itemList"></ul>
 
