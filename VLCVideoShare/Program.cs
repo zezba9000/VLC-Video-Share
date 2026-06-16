@@ -41,6 +41,8 @@ namespace VLCVideoShare
 
         static void Main(string[] args)
         {
+			Console.WriteLine("Version: v1.0.0");
+
 			// get paths
 			sharePaths = new List<string>();
 			#if DEBUG && ALLOW_DEBUG_PATH
@@ -453,7 +455,7 @@ namespace VLCVideoShare
 								response.AddHeader("Content-Disposition", $"attachment; filename=\"{filename}\"");
 
 								// Copy the file stream to the response output stream
-								const int bufferSize = 1024 * 1024 * 128;// 128mb
+								const int bufferSize = 1024 * 1024 * 32;// 32mb
 								fileStream.Seek(start, SeekOrigin.Begin);
 								long read = start, endRead = end + 1;
 
