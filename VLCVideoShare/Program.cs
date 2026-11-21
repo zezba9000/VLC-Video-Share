@@ -41,7 +41,7 @@ namespace VLCVideoShare
 
         static void Main(string[] args)
         {
-			Console.WriteLine("Version: v1.0.0");
+			Console.WriteLine("Version: v1.0.1");
 
 			// get paths
 			sharePaths = new List<string>();
@@ -256,6 +256,7 @@ namespace VLCVideoShare
 						requestPass = queryValue.Trim();
 					}
 				}
+				if (requestQuePath != null) requestQuePath = requestQuePath.TrimEnd('/').TrimEnd('\\');
 
 				// serve files to client
 				try
