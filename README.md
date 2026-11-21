@@ -5,6 +5,7 @@ Simple HTTP server designed around sharing Video or Audio to VLC compatible devi
 * To host simpling pass in paths you want to share: ```VLCVideoShare <path-to-folder> <path-to-folder> etc...```
 
 ## Other options
+* Password protection: ```--Pass=abc123```
 * Open NAT/UPnP on router for quick share: ```--OpenNAT``` (NOTE: manual port forwarding can be faster on routers)
 * Use a custom port: ```--Port=1234``` (default is 8085)
 
